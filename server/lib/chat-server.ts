@@ -1,4 +1,5 @@
 import * as socketio from 'socket.io';
+import { Server } from 'http';
 
 const nickNames = Object.create(null);
 const currentRoom = Object.create(null);
@@ -6,7 +7,7 @@ const currentRoom = Object.create(null);
 let io;
 let guestNumber = 1;
 
-const chatServerListen = (server) => {
+const chatServerListen = (server: Server) => {
   io = socketio.listen(server);
   io.sockets.on('connection', socket => {
     assignName(socket);
@@ -40,8 +41,8 @@ const chatServerListen = (server) => {
   });
 };
 
-function assignName(socket, name?) {
-  const result: any = Object.create(null);
+function assignName(socket, name?): void {
+  const result = Object.create(null);
   result.success = false;
   if (name && name.startsWith('Guest')) {
     result.message = 'Names cannot begin with "Guest".';
@@ -64,7 +65,7 @@ function assignName(socket, name?) {
   socket.emit('nameResult', result);
 }
 
-function joinRoom(socket, room) {
+function joinRoom(socket, room): void {
   socket.join(room);
   currentRoom[socket.id] = room;
   socket.emit('joinResult', {
@@ -79,17 +80,16 @@ function joinRoom(socket, room) {
       text: `${nickNames[socket.id]} has joined ${room}.`
     });
 
-  const usersInRoom = io.sockets.adapter.rooms[room].sockets;
+  let usersInRoom = io.sockets.adapter.rooms[room].sockets;
   const usersInRoomIds = Object.keys(usersInRoom);
   if (usersInRoomIds.length > 1) {
-    socket.emit('message', {
-      text: usersInRoomIds
-              .reduce((users, id, index) => {
-                return users += usersInRoom[id] !== socket.id ?
-                  (index ? ', ' : '') + nickNames[id] :
-                  '';
-              }, `Users currently in ${room}: `) + '.'
-    });
+    usersInRoom = usersInRoomIds.reduce((users, id, index) => {
+      return users += usersInRoom[id] !== socket.id
+        ? (index ? ', ' : '') + nickNames[id]
+        : '';
+    }, `Users currently in ${room}: `) + '.';
+
+    socket.emit('message', { text: usersInRoom });
   }
 }
 
